@@ -8,13 +8,33 @@
 import fs from "fs";
 import path from "path";
 import matter from "gray-matter";
+import { DEFAULT_AUTHOR } from "@/lib/site";
 
 const POSTS_DIR = path.join(process.cwd(), "content", "posts");
+const PUBLIC_DIR = path.join(process.cwd(), "public");
+
+// Only reference a headshot that is actually on disk (the authors folder
+// is gitignored, so a fresh clone may not have it).
+function resolveAuthorImage(imagePath?: string): string | undefined {
+  if (!imagePath) return undefined;
+  return fs.existsSync(path.join(PUBLIC_DIR, imagePath)) ? imagePath : undefined;
+}
+
+// Posts without an `author` frontmatter field belong to Francisco (the
+// site default). Materializing that here keeps the fallback in one place.
+function resolveAuthor(frontmatterAuthor?: PostAuthor): PostAuthor {
+  const author = frontmatterAuthor ?? DEFAULT_AUTHOR;
+  return { ...author, image: resolveAuthorImage(author.image) };
+}
 
 export interface PostAuthor {
   name: string;
   title?: string;
   url?: string;
+  // Optional headshot path under /public (e.g. /images/authors/jane.jpg).
+  // The folder is gitignored, so the loader only emits the path when the
+  // file actually exists locally — otherwise cards fall back to initials.
+  image?: string;
 }
 
 export interface Post {
@@ -25,7 +45,7 @@ export interface Post {
   tags: string[];
   featureImage?: string;
   draft: boolean;
-  author?: PostAuthor;
+  author: PostAuthor; // always set; defaults to Francisco
   body: string; // raw MDX body (no frontmatter)
   readingTimeMinutes: number;
 }
@@ -49,7 +69,7 @@ function loadPost(filename: string): Post {
     tags: data.tags ?? [],
     featureImage: data.featureImage,
     draft: data.draft ?? false,
-    author: data.author,
+    author: resolveAuthor(data.author),
     body: content,
     readingTimeMinutes: estimateReadingTime(content),
   };

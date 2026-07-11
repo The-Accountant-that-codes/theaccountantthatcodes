@@ -6,3 +6,6 @@ ghost-export/
 .DS_Store
 .vercel
 .env*
+# Author headshots stay out of the public repo (guest writers included).
+# They still deploy: .vercelignore allows this folder for Vercel uploads.
+public/images/authors/

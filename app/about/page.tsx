@@ -7,7 +7,7 @@ export const metadata: Metadata = {
 // Placeholder — Francisco supplies the real copy later.
 export default function AboutPage() {
   return (
-    <div className="prose prose-neutral dark:prose-invert">
+    <div className="prose prose-neutral mx-auto w-full max-w-2xl px-5 dark:prose-invert">
       <h1>About</h1>
       <p>
         Python, APIs, and AI automation for finance teams — by a CPA who

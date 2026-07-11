@@ -1,6 +1,14 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  images: {
+    // 60 for the large above-the-fold illustrations (LCP), 75 default.
+    qualities: [60, 75],
+    // AVIF first: the AI-illustration feature images compress ~40%
+    // smaller than WebP, which is what LCP rides on.
+    formats: ["image/avif", "image/webp"],
+  },
+
   // Ghost served every post at /<slug>/ with a trailing slash. Keeping the
   // same URL shape means zero redirects on the URLs that matter.
   trailingSlash: true,

@@ -1,0 +1,17 @@
+# When this file exists, Vercel CLI uses it INSTEAD of .gitignore.
+# It matches .gitignore except that public/images/authors/ is allowed,
+# so headshots deploy to the site without being committed to the repo.
+node_modules/
+.next/
+.env.local
+.env*
+ghost-export/
+.venv/
+.DS_Store
+.vercel
+# Not needed at build time on Vercel:
+scripts/
+requirements.txt
+CLAUDE.md
+CUTOVER.md
+.claude/

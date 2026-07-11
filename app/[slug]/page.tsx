@@ -77,7 +77,7 @@ export default async function PostPage({
   };
 
   return (
-    <article>
+    <article className="mx-auto w-full max-w-2xl px-5">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
@@ -108,9 +108,11 @@ export default async function PostPage({
             width={1200}
             height={675}
             priority
+            fetchPriority="high"
+            quality={60}
             // Rendered at most 632px wide (max-w-2xl minus padding), so
             // don't let high-DPR screens pull the 2x-of-1200px variant.
-            sizes="(max-width: 672px) 100vw, 632px"
+            sizes="(max-width: 672px) 92vw, 632px"
             className="mt-6 rounded-lg"
           />
         )}

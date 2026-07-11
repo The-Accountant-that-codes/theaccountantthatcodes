@@ -6,6 +6,10 @@
 @theme inline {
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   --font-serif: var(--font-source-serif), Charter, Georgia, serif;
+  /* Condensed face for the logo wordmark only. */
+  --font-condensed: var(--font-oswald), "Arial Narrow", sans-serif;
+  /* Brand navy/charcoal from the logo art. */
+  --color-brand: #2e3440;
 }
 
 /* Medium-style article body: serif, ~19px, relaxed line height.

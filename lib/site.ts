@@ -7,9 +7,12 @@ export const DEFAULT_AUTHOR: {
   name: string;
   title?: string;
   url?: string;
+  image?: string;
 } = {
   name: "Francisco Meyo",
   url: "https://www.linkedin.com/in/franciscomeyo",
+  // Gitignored path — the posts loader drops it if the file is absent.
+  image: "/images/authors/francisco-meyo.jpg",
 };
 
 export const SOCIAL_LINKS = {
