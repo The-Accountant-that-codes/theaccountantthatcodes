@@ -1,0 +1,250 @@
+---
+title: "GitHub: from vibe coding to controlled automation - Part 1"
+slug: "github-from-vibe-coding-to-controlled-automation-part-1"
+date: 2026-03-09
+excerpt: "Everyone is vibe coding now. We’re building scripts in Cursor. We’re building apps in Lovable. We’re connecting Claude to MCP and asking real business..."
+tags:
+  - "GitHub"
+featureImage: "/images/github-from-vibe-coding-to-controlled-automation-part-1/ChatGPT-Image-Mar-9--2026--08_22_24-AM.png"
+draft: false
+---
+
+Everyone is vibe coding now.
+
+We’re building scripts in [Cursor](https://cursor.com/). We’re building apps in [Lovable](https://lovable.dev/). We’re connecting [Claude](https://claude.com/) to MCP and asking real business questions. It feels powerful — and it is.
+
+But then something happens.
+
+You write a script that pulls financial data. Someone else needs it. Maybe it creates a journal entry. Maybe it updates records. Maybe it becomes part of a recurring monthly process.
+
+And suddenly you realize… it lives on your laptop or worse, on a website that might not be vetted by your IT department.
+
+That’s when the fun part of automation starts turning into real operational questions.
+
+Do I run these from my computer forever?  
+How do I collaborate if we split the work?  
+If I save my scripts in the cloud, where do credentials go?  
+Do I now need to spin up virtual machines in AWS, learn Docker, and manage infrastructure to run the code?
+
+And more importantly: if these scripts impact financial statements, how do I prove to auditors that they are subject to IT General Controls? Will this cost me a couple of control deficiencies?
+
+Once automation touches financial reporting, it’s no longer just a clever script. It becomes part of your control environment. This is where GitHub stops being “a developer tool” and starts becoming infrastructure for finance teams.
+
+In this post, we’ll break down what GitHub actually is, how it helps with version control and secrets management, and why it becomes foundational once your code starts impacting real financial processes.
+
+## **What is GitHub?**
+
+Let’s separate two things.
+
+**Git** is a version control system — it tracks changes to files over time.  
+[**GitHub**](https://github.com/) is a platform that hosts Git repositories in the cloud and adds collaboration, permissions, and review workflows on top of Git.
+
+Git records what changed in your code, who changed it, when it changed, and why (through commit messages). GitHub stores that history remotely and makes it accessible to your team.
+
+## Why GitHub matters for finance teams
+
+GitHub isn’t just an engineering tool. Once your scripts start interacting with financial systems, it effectively becomes part of your control framework.
+
+First, there’s **version control**. Every change to your code is logged, timestamped, and attributable. If a number changes or logic evolves, you can trace the exact modification, who made it, and the reasoning behind it through commit messages and pull requests.
+
+Second, there’s **secrets management**. API keys, database credentials, and OAuth tokens should never live directly inside your code. GitHub allows you to store secrets securely and reference them at runtime while keeping repositories clean.
+
+Third, there’s **change management and IT general controls (ITGC)**. Through branches and pull requests, changes can require review and approval before merging into the main branch. This creates a documented audit trail: who proposed the change, who reviewed it, what exactly changed, and when it was deployed. Instead of saying “we updated the script,” you can point auditors to a pull request with a reviewer, timestamp, and full diff of the code changes.
+
+Finally, GitHub also solves the question of **where your automation actually runs**. With **GitHub Actions**, you can define workflows that execute your scripts automatically in clean, temporary environments. Each run spins up a virtual machine with only the dependencies your code requires, typically inside a Python virtual environment. That means your automation no longer depends on someone’s laptop or local setup.
+
+## **Installation and setup**
+
+Before using GitHub effectively, you need two things:
+
+1. A GitHub account
+2. Git installed locally on your machine
+
+### **Create a GitHub account and repository**
+
+Start by creating an account at: [https://github.com](https://github.com)
+
+Once logged in, you can create a **repository** (often called a “repo”).
+
+A repository is simply a container for your code and its version history.
+
+When creating a repository, you can choose:
+
+- **Public** — visible to anyone
+- **Private** — accessible only to people you grant permission to
+
+### **Install Git**
+
+Git is the version control system that runs locally on your machine and communicates with GitHub.
+
+On macOS (via Homebrew):
+
+```
+brew install git
+```
+
+On Windows:  
+Download Git from [https://git-scm.com](https://git-scm.com) and follow the installer.
+
+Once installed, confirm in your terminal:
+
+```
+git --version
+```
+
+### **Set up SSH authentication**
+
+To connect your local machine to GitHub securely, you’ll configure **SSH authentication**.
+
+SSH (Secure Shell) is a cryptographic protocol that allows your machine to prove its identity to GitHub without repeatedly entering your username and password. It uses a public/private key pair:
+
+- The **private key** stays on your machine
+- The **public key** is added to GitHub
+
+Open your terminal and generate a key:
+
+```
+ssh-keygen -t ed25519 -C "your_email@example.com"
+```
+
+  
+Then download and add the public key (found in `~/.ssh/id_ed25519.pub`) to:
+
+GitHub → Settings → SSH and GPG keys → New SSH key
+
+Test the connection with this command in your terminal:
+
+```
+ssh -T git@github.com
+```
+
+If configured correctly, GitHub will confirm the connection.
+
+Using SSH is considered best practice because:
+
+- It’s more secure than password authentication
+- It avoids storing credentials in scripts
+- It integrates cleanly with automated workflows
+
+## **Minimal commands to get to work**
+
+You don’t need to master Git. You need a small handful of commands that cover 90% of daily work.
+
+Here are the essentials.
+
+### **Clone — get a repository locally**
+
+To try this yourself, start by **forking the repository** so you have your own copy.
+
+Open the repo below and click **Fork** in the top right corner:
+
+[https://github.com/The-Accountant-that-codes/automation\_scripts](https://github.com/The-Accountant-that-codes/automation_scripts)
+
+Once the fork is created under your account, clone it to your machine:
+
+```
+git clone git@github.com:YOUR_USERNAME/automation_scripts.git
+```
+
+This downloads:
+
+- The code
+- The full version history
+- The branch structure
+
+After this, you’re working locally.
+
+### Make a small change
+
+Open the cloned repository folder in your preferred IDE (VS Code, Cursor, etc.).
+
+Once the project is open, make a small change to test things out. For example you could:
+
+- Add a new script
+- Update an existing one
+- Create a simple `README.md`
+
+At this point Git detects that files in the repository have changed, but nothing has been recorded in version history yet.
+
+### **Status — see what changed**
+
+```
+git status
+```
+
+This shows:
+
+- Files you modified
+- Files you added
+- Files not yet tracked
+
+It’s your “what’s happening right now?” command.
+
+### **Add — stage changes**
+
+Once you modify or create files, you need to stage them before committing.
+
+Add a specific file:
+
+```
+git add filename.py
+```
+
+Or stage everything:
+
+```
+git add .
+```
+
+This tells Git which changes you intend to record.
+
+### **Commit — record a snapshot**
+
+A commit creates a snapshot of your changes:
+
+```
+git commit -m "Add revenue automation logic"
+```
+
+A good commit message should briefly explain *why* the change was made — not just what changed. Commits create traceability.
+
+### **Push — send changes to GitHub**
+
+Once committed and synced, push your changes back to GitHub:
+
+```
+git push origin main
+```
+
+This sends your local commits to the `main` branch on the remote repository.
+
+This is the simplest workflow — directly pushing to `main` without review. It works for individual experimentation or very small teams, but in environments subject to ITGC and change management requirements, this is usually not sufficient.
+
+### **Pull — sync with GitHub**
+
+When working with code from a shared repository, it’s good practice to **pull the latest changes before starting your work**. This ensures your local copy is up to date with the main branch:
+
+```
+git pull origin main
+```
+
+Here’s what this means:
+
+- `origin` → the remote repository on GitHub
+- `main` → the main branch
+
+This command pulls the latest changes from the `main` branch on GitHub into your local repository.
+
+Again, this assumes you are working directly on `main` and there is no formal review process in place.
+
+## What’s coming in part 2
+
+This post covered the foundation: what GitHub is, why it matters for finance controls, and the core workflow to get started.
+
+In **part 2**, we’ll go deeper into the patterns that make code production-ready:
+
+- **Branches and pull requests** — enforcing review before changes are merged
+- **GitHub Actions** — running your scripts automatically, on a schedule, without relying on anyone’s laptop
+- **Secrets management in practice** — securely connecting to systems like NetSuite, Salesforce, or Snowflake
+
+The foundation is in place. In the next post, we’ll build on it.
