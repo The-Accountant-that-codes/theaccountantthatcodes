@@ -7,7 +7,7 @@ import { formatDate } from "@/lib/format";
 export default function Byline({ post }: { post: Post }) {
   const author = post.author ?? DEFAULT_AUTHOR;
   return (
-    <p className="text-sm text-neutral-500 dark:text-neutral-400">
+    <p className="text-sm text-neutral-600 dark:text-neutral-400">
       {author.url ? (
         <a href={author.url} className="font-medium text-neutral-700 hover:underline dark:text-neutral-300">
           {author.name}

@@ -3,6 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { MDXRemote } from "next-mdx-remote/rsc";
+import rehypePrettyCode from "rehype-pretty-code";
 import { getAllPosts, getPostBySlug, getRelatedPosts } from "@/lib/posts";
 import { SITE_URL, SITE_NAME, DEFAULT_AUTHOR } from "@/lib/site";
 import Byline from "@/components/Byline";
@@ -107,12 +108,37 @@ export default async function PostPage({
             width={1200}
             height={675}
             priority
+            // Rendered at most 632px wide (max-w-2xl minus padding), so
+            // don't let high-DPR screens pull the 2x-of-1200px variant.
+            sizes="(max-width: 672px) 100vw, 632px"
             className="mt-6 rounded-lg"
           />
         )}
       </header>
       <div className="prose prose-neutral mt-8 max-w-none dark:prose-invert">
-        <MDXRemote source={post.body} />
+        <MDXRemote
+          source={post.body}
+          options={{
+            mdxOptions: {
+              rehypePlugins: [
+                [
+                  rehypePrettyCode,
+                  {
+                    // Both themes are compiled in; CSS picks one via
+                    // prefers-color-scheme (see globals.css). The
+                    // "-default" variants use GitHub's current palette,
+                    // whose comment gray passes WCAG AA contrast.
+                    theme: {
+                      light: "github-light-default",
+                      dark: "github-dark-default",
+                    },
+                    defaultLang: "text",
+                  },
+                ],
+              ],
+            },
+          }}
+        />
       </div>
       <RelatedPosts posts={getRelatedPosts(post)} />
       <div className="mt-12">

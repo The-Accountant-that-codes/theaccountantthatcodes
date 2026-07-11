@@ -6,7 +6,7 @@ export default function RelatedPosts({ posts }: { posts: Post[] }) {
   if (posts.length === 0) return null;
   return (
     <aside className="mt-12 border-t border-neutral-200 pt-8 dark:border-neutral-800">
-      <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
+      <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-600 dark:text-neutral-400">
         Related posts
       </h2>
       <ul className="mt-4 space-y-4">
@@ -16,7 +16,7 @@ export default function RelatedPosts({ posts }: { posts: Post[] }) {
               <span className="font-medium group-hover:underline">
                 {post.title}
               </span>
-              <span className="block text-sm text-neutral-500 dark:text-neutral-400">
+              <span className="block text-sm text-neutral-600 dark:text-neutral-400">
                 {formatDate(post.date)} · {post.readingTimeMinutes} min read
               </span>
             </Link>

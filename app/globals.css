@@ -1,2 +1,87 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
+
+/* Map Tailwind's font utilities to the next/font self-hosted fonts.
+   font-sans -> Inter (UI, headings), font-serif -> Source Serif 4 (body). */
+@theme inline {
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-source-serif), Charter, Georgia, serif;
+}
+
+/* Medium-style article body: serif, ~19px, relaxed line height.
+   The typography plugin uses :where() (zero specificity), so these
+   plain selectors override it cleanly. */
+.prose {
+  font-family: var(--font-serif);
+  font-size: 1.1875rem; /* 19px */
+  line-height: 1.7;
+}
+
+.prose h1,
+.prose h2,
+.prose h3,
+.prose h4 {
+  font-family: var(--font-sans);
+  letter-spacing: -0.01em;
+}
+
+/* Drop the plugin's backtick pseudo-quotes around inline code. */
+.prose code::before,
+.prose code::after {
+  content: none;
+}
+
+.prose :not(pre) > code {
+  font-size: 0.85em;
+  background: var(--color-neutral-100);
+  padding: 0.15em 0.35em;
+  border-radius: 0.25rem;
+  font-weight: 500;
+}
+
+@media (prefers-color-scheme: dark) {
+  .prose :not(pre) > code {
+    background: var(--color-neutral-800);
+  }
+}
+
+/* Code blocks: Shiki dual-theme output (rehype-pretty-code emits
+   --shiki-light/--shiki-dark custom properties on every token). */
+.prose pre {
+  font-size: 0.875rem;
+  line-height: 1.6;
+  border-radius: 0.5rem;
+  padding: 1rem 1.25rem;
+  overflow-x: auto;
+  border: 1px solid var(--color-neutral-200);
+}
+
+pre[data-theme],
+pre[data-theme] span,
+code[data-theme],
+code[data-theme] span {
+  color: var(--shiki-light);
+  background-color: var(--shiki-light-bg);
+}
+
+@media (prefers-color-scheme: dark) {
+  .prose pre {
+    border-color: var(--color-neutral-800);
+  }
+  pre[data-theme],
+  pre[data-theme] span,
+  code[data-theme],
+  code[data-theme] span {
+    color: var(--shiki-dark);
+    background-color: var(--shiki-dark-bg);
+  }
+}
+
+/* The one YouTube embed: make it responsive instead of Ghost's fixed
+   200x113 oembed default. */
+.prose iframe[src*="youtube.com"] {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  height: auto;
+  border-radius: 0.5rem;
+}
