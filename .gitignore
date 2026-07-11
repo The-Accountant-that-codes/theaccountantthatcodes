@@ -4,3 +4,5 @@ node_modules/
 ghost-export/
 .venv/
 .DS_Store
+.vercel
+.env*
