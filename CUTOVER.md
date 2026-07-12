@@ -5,13 +5,13 @@ final step (cancelling Ghost), and every step before it is reversible.
 
 ## 0. Prerequisites (done before touching DNS)
 
-- [ ] Site deployed to Vercel and all routes verified on the
+- [x] Site deployed to Vercel and all routes verified on the
       `*.vercel.app` preview domain (all 10 post URLs, `/about/`,
       `/tags/*`, `/rss.xml`, `/sitemap.xml`, `/coming-soon/` redirect).
-- [ ] `KIT_API_KEY` set in Vercel → Project → Settings → Environment
+- [x] `KIT_API_KEY` set in Vercel → Project → Settings → Environment
       Variables (Production). Test the subscribe form on the preview
       domain after setting it.
-- [ ] Add `theaccountantthatcodes.com` and `www.theaccountantthatcodes.com`
+- [x] Add `theaccountantthatcodes.com` and `www.theaccountantthatcodes.com`
       as domains in Vercel → Project → Settings → Domains. Vercel will
       show the exact DNS records it wants — use those values in step 1
       (they should match the ones below, but Vercel's UI is the source
@@ -21,31 +21,31 @@ final step (cancelling Ghost), and every step before it is reversible.
 
 In Porkbun → theaccountantthatcodes.com → DNS records:
 
-- [ ] **Root (apex)**: delete the current ALIAS record pointing to
+- [x] **Root (apex)**: delete the current ALIAS record pointing to
       `uixie.porkbun.com` (Porkbun's URL forwarder). Also remove the
       associated URL-forwarding rule if one exists under "URL
       Forwarding". Replace with Vercel's apex record:
       `A @ 76.76.21.21` (or the ALIAS/A value Vercel's Domains page
       shows for the apex).
-- [ ] **www**: delete the CNAME pointing to `ghost.io`. Replace with
+- [x] **www**: delete the CNAME pointing to `ghost.io`. Replace with
       `CNAME www cname.vercel-dns.com` (or the value Vercel shows).
-- [ ] **`*` wildcard CNAME**: decide. It currently catches all other
+- [x] **`*` wildcard CNAME**: decide. It currently catches all other
       subdomains. Recommended: delete it — nothing should resolve except
       the records you define. If you keep it, point it somewhere you
       control, never at ghost.io.
-- [ ] **Leave untouched**: the Kit CNAMEs (newsletter sending domain)
+- [x] **Leave untouched**: the Kit CNAMEs (newsletter sending domain)
       and the `_dmarc` TXT record. Email deliverability depends on them
       and they have nothing to do with the website move.
 
 ## 2. Verify after DNS propagates (minutes to ~1 hour)
 
-- [ ] `https://theaccountantthatcodes.com/` loads the new site with a
+- [x] `https://theaccountantthatcodes.com/` loads the new site with a
       valid certificate (Vercel provisions it automatically once DNS
       points at them).
-- [ ] `https://www.theaccountantthatcodes.com/` redirects to the apex
+- [x] `https://www.theaccountantthatcodes.com/` redirects to the apex
       (configure the redirect direction in Vercel → Domains; apex as
       primary matches the site's canonical URLs).
-- [ ] All 10 original post URLs return 200 on the live domain:
+- [x] All 10 original post URLs return 200 on the live domain:
 
       /setting-up-your-coding-environment/
       /coding-without-the-syntax-using-ai-agents-cursor-and-claude-code/
@@ -58,11 +58,11 @@ In Porkbun → theaccountantthatcodes.com → DNS records:
       /query-in-plain-english-curate-your-snowflake-datawarehouse-semantic-layers-for-finance-engineers/
       /stop-waiting-on-invoices-accurate-accruals-from-vendor-billing-apis/
 
-- [ ] `/coming-soon/` 301-redirects to
+- [x] `/coming-soon/` 301-redirects to
       `/setting-up-your-coding-environment/`.
-- [ ] Subscribe form creates a subscriber in Kit from the live domain
+- [x] Subscribe form creates a subscriber in Kit from the live domain
       (use a test address, then remove it in the Kit dashboard).
-- [ ] Vercel Analytics shows pageviews (visit a few pages, check the
+- [x] Vercel Analytics shows pageviews (visit a few pages, check the
       Analytics tab).
 
 ## 3. Post-cutover cleanup
