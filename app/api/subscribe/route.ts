@@ -42,6 +42,31 @@ export async function POST(request: Request) {
     });
 
     if (res.ok) {
+      // Bare API-created subscribers get no emails from Kit. Routing
+      // them through a form additionally triggers whatever that form is
+      // configured to send (welcome automation / confirmation email).
+      // Optional: only runs when KIT_FORM_ID is set.
+      const formId = process.env.KIT_FORM_ID;
+      if (formId && res.status === 201) {
+        const formRes = await fetch(
+          `https://api.kit.com/v4/forms/${formId}/subscribers`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-Kit-Api-Key": apiKey,
+            },
+            body: JSON.stringify({ email_address: email }),
+          }
+        );
+        if (!formRes.ok) {
+          // Subscriber exists either way; a form failure shouldn't
+          // surface as a signup error to the visitor.
+          console.error(
+            `Kit form add failed ${formRes.status}: ${(await formRes.text()).slice(0, 300)}`
+          );
+        }
+      }
       // Kit returns 201 for a new subscriber and 200 when the email
       // already exists, so a 200 means "already subscribed".
       return NextResponse.json({
