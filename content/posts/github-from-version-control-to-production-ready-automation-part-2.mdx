@@ -276,8 +276,21 @@ You can also schedule this workflow by uncommenting the `schedule` block (for ex
 
 ---
 
+## FAQ
+
+**Q: How do I run a Python script on a schedule without a server?**
+Use GitHub Actions with a `cron` trigger. Every run spins up a temporary virtual machine, installs your dependencies, executes the script, and shuts down — no laptop, no AWS account, no Docker. For most finance automations, the free tier covers it.
+
+**Q: Where should API keys live in an automated workflow?**
+In GitHub Secrets (Settings → Secrets and variables → Actions), never in the code. The workflow injects the key as an environment variable at runtime, so it only exists during execution and never appears in the repository.
+
+**Q: What do auditors actually look for in ITGC for scripts?**
+Evidence of change management: who changed the code, who reviewed it, and when it reached production. A protected `main` branch with required pull request approvals gives you exactly that — every change has a diff, a reviewer, and a timestamp.
+
 ## Closing thoughts
 
 This is where automation becomes production-ready.
 
 Code is developed in branches, reviewed through pull requests, secrets are handled securely, and execution is automated. That combination is what allows you to move from experimentation to something that can support real financial processes — with the controls to back it up.
+
+*Last updated: July 2026.*

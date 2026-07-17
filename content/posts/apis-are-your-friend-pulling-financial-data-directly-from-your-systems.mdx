@@ -2,7 +2,7 @@
 title: "APIs Are Your Friend: Pulling Financial Data Directly from Your Systems"
 slug: "apis-are-your-friend-pulling-financial-data-directly-from-your-systems"
 date: 2026-01-03
-excerpt: "If you’ve ever exported a CSV, cleaned it in Excel, uploaded it somewhere else, and repeated the process every month—you already know why automation matters..."
+excerpt: "What is an API? A plain-English guide for accountants: API keys, endpoints, JSON responses in Python, and keeping credentials safe in .env files."
 tags:
   - "Essentials"
 featureImage: "/images/apis-are-your-friend-pulling-financial-data-directly-from-your-systems/ChatGPT-Image-Jan-3--2026--12_50_12-PM.png"
@@ -294,6 +294,19 @@ Once you understand APIs, spreadsheets stop being the center of gravity.
 
 ---
 
+## **FAQ**
+
+**Q: Do accountants need to learn APIs?**
+If you export a CSV, clean it in Excel, and upload it somewhere else every month — yes. APIs replace that loop with a script that pulls the same data on demand, and they're the foundation for every automation that follows: journal entries, reconciliations, and system-to-system syncs.
+
+**Q: What is JSON in simple terms?**
+JSON is the structured text format most APIs use to return data — essentially a nested dictionary of field names and values. In Python, a JSON response becomes a regular dictionary (or a list of dictionaries), so if you can work with those, you can read any API response.
+
+**Q: Is it safe to use API keys?**
+Yes, if you treat them like passwords: store them in a `.env` file that never gets committed to GitHub, load them with `python-dotenv`, and start with read-only permissions. The unsafe version is hardcoding keys in scripts you share or upload.
+
+---
+
 ## **Closing Thoughts**
 
 APIs are not an engineering trick—they’re a business tool.
@@ -308,3 +321,5 @@ Once you understand:
 You unlock a new way to work with financial systems.
 
 And with modern Python tooling, the barrier to entry has never been lower.
+
+*Last updated: July 2026.*

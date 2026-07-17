@@ -2,7 +2,7 @@
 title: "MCP and NetSuite: giving AI real context over your ERP"
 slug: "mcp-and-netsuite-giving-ai-real-context-over-your-erp"
 date: 2026-02-13
-excerpt: "If you’ve been using tools like Claude or ChatGPT, you’ve probably experienced how powerful AI becomes when it has context e.g. when you upload a file to it..."
+excerpt: "How to connect Claude to NetSuite with MCP: install the MCP Standard Tools SuiteApp, configure a dedicated role, and query your ERP in plain English."
 tags:
   - "NetSuite"
   - "Ramp"
@@ -10,11 +10,9 @@ featureImage: "/images/mcp-and-netsuite-giving-ai-real-context-over-your-erp/Gem
 draft: false
 ---
 
----
-
 If you’ve been using tools like Claude or ChatGPT, you’ve probably experienced how powerful AI becomes when it has context e.g. when you upload a file to it and ask questions about it.
 
-MCP is about taking that idea seriously — and applying it directly to systems like NetSuite.
+MCP is about taking that idea seriously — and applying it directly to systems like NetSuite. **MCP (Model Context Protocol)** is an open standard created by Anthropic that lets AI assistants like Claude connect to systems such as NetSuite through well-defined, permission-aware tools — and NetSuite now supports it natively via an official SuiteApp.
 
 ---
 
@@ -320,3 +318,16 @@ Instead of exporting data between systems, you’re allowing AI to operate acros
 That’s when this starts to feel less like a chatbot… and more like part of your finance stack.
 
 ---
+
+## **FAQ**
+
+**Q: Does NetSuite support MCP?**
+Yes. NetSuite provides an official managed SuiteApp called **MCP Standard Tools** that exposes records, reports, saved searches, and SuiteQL queries to AI clients through the Model Context Protocol. Because it's managed, NetSuite keeps it updated automatically.
+
+**Q: Is it safe to connect Claude to NetSuite?**
+MCP does not bypass NetSuite security — Claude can only see and do what the connected role's permissions allow. The safe pattern is a dedicated role with View-level permissions for experimenting in production, and elevated permissions only in sandbox.
+
+**Q: Do I need a paid Claude plan to connect NetSuite?**
+Yes — custom connectors require a Claude Pro or Enterprise plan. On the NetSuite side you need Admin access to install the SuiteApp and enable REST Web Services and Server SuiteScript.
+
+*Last updated: July 2026.*

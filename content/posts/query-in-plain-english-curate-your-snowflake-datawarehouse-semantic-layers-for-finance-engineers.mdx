@@ -231,3 +231,18 @@ And this is where the earlier steps pay off.
 If your data is messy, AI amplifies the confusion.  
 If your data is curated but lacks a semantic layer, AI guesses.  
 But if both are in place, AI becomes a force multiplier.
+
+---
+
+## FAQ
+
+**Q: What is a semantic layer in a data warehouse?**
+A semantic layer is a translation layer between your tables and your business — typically a version-controlled YAML file that describes tables in plain English, defines metrics like ARR with the correct logic, and maps synonyms so different phrasings of the same question resolve to the same answer. It's what makes natural-language querying reliable instead of a guessing game.
+
+**Q: Should I use Fivetran or build my own pipelines?**
+Use Fivetran + dbt when your sources have connectors and you want low maintenance. Build DIY (Python + GitHub Actions) when you need custom reports, vendor billing APIs, or sources without connectors — it costs less and gives full control, but you own scheduling and failure handling.
+
+**Q: Can Claude or ChatGPT query Snowflake directly?**
+Yes — through Snowflake's MCP integration, Claude can connect to your warehouse, use the semantic layer, and generate accurate SQL from plain-English questions. Snowflake's role-based access control still applies, so you can expose the warehouse to AI while restricting sensitive data like payroll down to the table, column, or row level.
+
+*Last updated: July 2026.*

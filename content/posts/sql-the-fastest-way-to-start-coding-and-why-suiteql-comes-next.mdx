@@ -221,17 +221,11 @@ It explains SQL concepts in a very approachable way and includes a built-in SQL 
 
 ## **From SQL to SuiteQL**
 
-Once you understand basic SQL, transitioning to **SuiteQL** is straightforward.
+[**SuiteQL**](https://docs.oracle.com/en/cloud/saas/netsuite/ns-online-help/section_156257770590.html) is NetSuite’s SQL-based query language: it lets you query NetSuite records directly through the REST API instead of relying on saved searches and CSV exports.
 
-[**SuiteQL**](https://docs.oracle.com/en/cloud/saas/netsuite/ns-online-help/section_156257770590.html) is NetSuite’s SQL-like query language that allows you to query NetSuite data directly through APIs. Which means, you will be able to execute queries directly from your Python scripts (note that if you want to set up a SuitQL editor in NetSuite, [Tim Dietrich](https://timdietrich.me/suiteql-query-tool/) developed a great solution).
+Once you understand basic SQL, transitioning to SuiteQL is straightforward. You’ll be able to execute queries directly from your Python scripts (note that if you want to set up a SuiteQL editor in NetSuite, [Tim Dietrich](https://timdietrich.me/suiteql-query-tool/) developed a great solution).
 
-Instead of relying on:
-
-- Saved searches
-- CSV exports
-- Manual filtering
-
-You write a query and get structured results back.
+Instead of relying on saved searches, CSV exports, and manual filtering — you write a query and get structured results back.
 
 ---
 
@@ -282,3 +276,18 @@ SuiteQL:
 - Fits cleanly into automation workflows
 
 If you already understand the basics of SQL, SuiteQL feels like a natural extension of what you already know—not something entirely new. In future posts, we’ll use SuiteQL as part of more complex automations.
+
+---
+
+## **FAQ**
+
+**Q: Is SQL worth learning for accountants?**
+Yes — it's the highest-leverage first coding skill for finance professionals. You can be productive the same day you start, because SQL maps directly onto concepts you already know: tables, rows, columns, and lookups.
+
+**Q: What is SuiteQL?**
+SuiteQL is NetSuite's SQL-based query language, run through the REST API's `suiteql` endpoint or tools built on top of it. It lets you query NetSuite tables like `transaction`, `account`, and `vendor` with standard SQL syntax instead of building saved searches.
+
+**Q: What's the difference between SQL and SuiteQL?**
+The syntax is essentially the same — `SELECT`, `FROM`, `WHERE`, and `JOIN` all work as expected. The difference is the data model: SuiteQL queries NetSuite's records and field names, so the learning curve is NetSuite's schema, not the language.
+
+*Last updated: July 2026.*
