@@ -1,8 +1,14 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { getAllPosts, getAllTags } from "@/lib/posts";
 import { FeaturedCard, GridCard } from "@/components/cards";
 import LatestPosts from "@/components/LatestPosts";
 import SubscribeForm from "@/components/SubscribeForm";
+import { SITE_URL } from "@/lib/site";
+
+export const metadata: Metadata = {
+  alternates: { canonical: `${SITE_URL}/` },
+};
 
 export default function HomePage() {
   const posts = getAllPosts();

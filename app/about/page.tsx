@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
-import { SOCIAL_LINKS } from "@/lib/site";
+import { SITE_URL, SOCIAL_LINKS } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "About",
   description:
     "The Accountant That Codes is an independent publication by Francisco Meyo — coding, automation, and AI for accountants and finance professionals.",
+  alternates: { canonical: `${SITE_URL}/about/` },
 };
 
 export default function AboutPage() {

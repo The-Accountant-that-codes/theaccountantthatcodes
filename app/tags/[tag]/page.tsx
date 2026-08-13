@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getAllTags, getPostsByTag } from "@/lib/posts";
 import { GridCard } from "@/components/cards";
+import { SITE_URL } from "@/lib/site";
 
 export const dynamicParams = false;
 
@@ -22,6 +23,7 @@ export async function generateMetadata({
   return {
     title: `Posts tagged "${display}"`,
     description: `All posts tagged ${display}.`,
+    alternates: { canonical: `${SITE_URL}/tags/${tag}/` },
   };
 }
 

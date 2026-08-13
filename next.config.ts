@@ -25,6 +25,15 @@ const nextConfig: NextConfig = {
         destination: "/setting-up-your-coding-environment/",
         statusCode: 301,
       },
+      // Ghost's default tag URL was singular (/tag/<slug>/); this site's
+      // tag route is plural (/tags/<slug>/). No code route ever existed at
+      // /tag/, so it was 404ing instead of consolidating equity from
+      // Google's still-indexed Ghost-era URLs.
+      {
+        source: "/tag/:tag",
+        destination: "/tags/:tag/",
+        statusCode: 301,
+      },
     ];
   },
 };
