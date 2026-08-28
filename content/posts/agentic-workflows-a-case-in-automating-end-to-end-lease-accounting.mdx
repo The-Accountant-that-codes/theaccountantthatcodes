@@ -10,15 +10,15 @@ featureImage: "/images/agentic-workflows-a-case-in-automating-end-to-end-lease-a
 draft: false
 ---
 
-Lease accounting under ASC 842 has always split cleanly into two kinds of work, and finance teams have always done both kinds by hand. That's the actual problem — not the standard, not the math, the fact that a human was doing arithmetic that belonged in code.
+An agentic workflow draws one line through a process: reading and judgment go to a model, and everything downstream of that — the math, the persistence, the write into whatever system runs the business — goes to deterministic code. The model's job ends the instant its output becomes structured data. It doesn't compute, it doesn't decide the transaction, and it never touches production directly.
 
-Here's the traditional process. Read the lease. Pull the payment schedule, the free rent periods, the tenant improvement (TI) credit, the renewal options. Get an incremental borrowing rate (IBR) from a banking partner or a valuation specialist. Build a schedule that discounts the payment stream to a present value — that's your right-of-use (ROU) asset and lease liability. Roll it forward: interest accretion on the liability, straight-line amortization on the asset. Turn that schedule into a journal entry and key it into NetSuite. Repeat every month, for every lease.
+Let's take lease accounting for example. Here's the traditional process. Read the lease. Pull the payment schedule, the free rent periods, the tenant improvement (TI) credit, the renewal options. Get an incremental borrowing rate (IBR) from a banking partner or a valuation specialist. Build a schedule that discounts the payment stream to a present value — that's your right-of-use (ROU) asset and lease liability. Roll it forward: interest accretion on the liability, straight-line amortization on the asset. Turn that schedule into a journal entry and key it into NetSuite. Repeat every month, for every lease.
 
 None of that second half needs a person. It needs a spreadsheet formula, executed correctly, every time. The only part that ever actually needed judgment was the first part — reading the contract.
 
 ## 1. The judgment/arithmetic split
 
-An agentic lease accounting workflow works because it draws one line: reading and judgment go to a model, arithmetic and persistence go to deterministic code. Nothing downstream of the extracted terms should touch an LLM again.
+That's the line this build draws in practice: reading and judgment go to Claude, arithmetic and persistence go to deterministic code. Nothing downstream of the extracted terms should touch an LLM again.
 
 That's a stricter rule than it sounds. It means the model's job ends the moment the lease terms are structured data. It doesn't compute a present value, it doesn't decide the journal entry, and it definitely doesn't touch NetSuite. Everything after extraction is a Python function with an assert statement, not a prompt. In our build this is three notebooks stitched together: `lease_agent.ipynb` extracts and schedules, a Supabase database holds the result, and `post_lease_entry.ipynb` turns a month of schedules into a journal entry.
 
