@@ -4,6 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { MDXRemote } from "next-mdx-remote/rsc";
 import rehypePrettyCode from "rehype-pretty-code";
+import remarkGfm from "remark-gfm";
 import { getAllPosts, getPostBySlug, getRelatedPosts } from "@/lib/posts";
 import { SITE_URL, SITE_NAME, DEFAULT_AUTHOR } from "@/lib/site";
 import Byline from "@/components/Byline";
@@ -122,6 +123,7 @@ export default async function PostPage({
           source={post.body}
           options={{
             mdxOptions: {
+              remarkPlugins: [remarkGfm],
               rehypePlugins: [
                 [
                   rehypePrettyCode,
