@@ -1,0 +1,137 @@
+---
+title: "Agentic workflows: a case in automating end-to-end lease accounting"
+slug: "agentic-workflows-a-case-in-automating-end-to-end-lease-accounting"
+date: 2026-08-27
+excerpt: "Reading the lease was always the part that needed a human. It doesn't anymore. Here's the full walkthrough — Claude reading a lease PDF natively with forced tool calls and citations, a deterministic ASC 842 schedule, and a journal entry posted straight into NetSuite."
+tags:
+  - "NetSuite"
+  - "Lease Accounting"
+featureImage: "/images/agentic-workflows-a-case-in-automating-end-to-end-lease-accounting/human-vs-agent.png"
+draft: false
+---
+
+Lease accounting under ASC 842 has always split cleanly into two kinds of work, and finance teams have always done both kinds by hand. That's the actual problem — not the standard, not the math, the fact that a human was doing arithmetic that belonged in code.
+
+Here's the traditional process. Read the lease. Pull the payment schedule, the free rent periods, the tenant improvement (TI) credit, the renewal options. Get an incremental borrowing rate (IBR) from a banking partner or a valuation specialist. Build a schedule that discounts the payment stream to a present value — that's your right-of-use (ROU) asset and lease liability. Roll it forward: interest accretion on the liability, straight-line amortization on the asset. Turn that schedule into a journal entry and key it into NetSuite. Repeat every month, for every lease.
+
+None of that second half needs a person. It needs a spreadsheet formula, executed correctly, every time. The only part that ever actually needed judgment was the first part — reading the contract.
+
+## 1. The judgment/arithmetic split
+
+An agentic lease accounting workflow works because it draws one line: reading and judgment go to a model, arithmetic and persistence go to deterministic code. Nothing downstream of the extracted terms should touch an LLM again.
+
+That's a stricter rule than it sounds. It means the model's job ends the moment the lease terms are structured data. It doesn't compute a present value, it doesn't decide the journal entry, and it definitely doesn't touch NetSuite. Everything after extraction is a Python function with an assert statement, not a prompt. In our build this is three notebooks stitched together: `lease_agent.ipynb` extracts and schedules, a Supabase database holds the result, and `post_lease_entry.ipynb` turns a month of schedules into a journal entry.
+
+| Approach | Pros | Cons |
+|---|---|---|
+| Fully manual | No tooling to build or maintain | Hours per lease, error-prone TI/free-rent detection, schedule logic lives in someone's Excel muscle memory |
+| Lease accounting software (LeaseQuery, Visual Lease, etc.) | Purpose-built, audit-ready output | Still requires a human to abstract the contract into the software; licensing cost scales with portfolio size |
+| Agentic workflow | Agent reads the contract, code does the math, cited and reconcilable at every step | You own the pipeline — extraction prompt quality and controls are your responsibility |
+
+## 2. Extraction: Claude reads the lease, not a script
+
+Extraction is the one step in ASC 842 accounting that always required a human to read the whole contract — and it's the one step a model with native PDF reading and a forced tool call can now do end to end, with a citation for every number.
+
+The lease PDF goes to Claude as a native `document` content block — no OCR, no regex, no pre-chunking. `tool_choice` is forced to a single tool, `record_lease_terms`, with a strict JSON schema, so the response can't come back as prose that needs parsing:
+
+```python
+with client.messages.stream(
+    model=MODEL,
+    max_tokens=16000,
+    tools=[EXTRACTION_TOOL],
+    tool_choice={"type": "tool", "name": "record_lease_terms"},
+    messages=[{
+        "role": "user",
+        "content": [
+            {"type": "document", "source": {
+                "type": "base64", "media_type": "application/pdf", "data": pdf_b64
+            }},
+            {"type": "text", "text": EXTRACTION_PROMPT},
+        ],
+    }],
+) as stream:
+    ...
+extracted = next(b for b in final_message.content if b.type == "tool_use").input
+```
+
+The interesting part isn't the API call — it's the schema. The TI credit field alone carries a paragraph of guidance, because TI dollars hide under a dozen names: a "Landlord's Work" budget, a "not-to-exceed" cap, a "turn-key" ceiling, usually buried in an exhibit or a footnote, rarely under a line labeled "allowance." A naive extraction prompt misses all of it. The schema also enforces a sign convention (negative when it benefits the tenant) and a hard rule that missing data comes back `null`, never `0` — because "the lease is silent" and "the lease affirmatively grants nothing" are different facts, and collapsing them into the same number is how a schedule quietly becomes wrong.
+
+Every extracted figure carries a citation — page number and a short verbatim quote — so a reviewer can verify a number without re-reading the lease. And the notebook checks itself: if the lease states a total base-rent figure, the extracted monthly payments are summed and reconciled against it within a 0.5% tolerance, with a hard warning on mismatch. That's the review layer, and it runs before a single dollar hits a schedule.
+
+## 3. Scheduling: once terms are structured, it's arithmetic
+
+Once lease terms are structured JSON, the ASC 842 amortization schedule is arithmetic, not judgment — a present value of the payment stream, a liability roll-forward, and a straight-line ROU amortization, all closed-form and all belonging in code.
+
+| Header value | Formula |
+|---|---|
+| Opening lease liability | `NPV(IBR/12, payments)` |
+| Straight-line expense | `AVERAGE(payments)` |
+| Monthly TI amortization | `ti_credits / n` |
+
+```python
+def build_schedule(ibr, ti_credits, payments):
+    summary = lease_summary(ibr, ti_credits, payments)
+    monthly_rate = ibr / 12
+    sl_expense, ti_monthly = summary["straight_line_expense"], summary["monthly_ti_amortization"]
+
+    rows, liability_bop = [], summary["present_value"]
+    rou_bop = summary["present_value"] + ti_credits
+    for period, (pay_date, amount) in enumerate(payments, start=1):
+        interest = liability_bop * monthly_rate
+        liability_eop = liability_bop - amount + interest
+        rou_eop = rou_bop - sl_expense - ti_monthly + interest
+        rows.append([period, pay_date, amount, liability_bop, -amount, interest,
+                     liability_eop, rou_bop, -sl_expense, -ti_monthly, interest, rou_eop])
+        liability_bop, rou_bop = liability_eop, rou_eop
+    return pd.DataFrame(rows, columns=SCHEDULE_COLUMNS)
+```
+
+Forty lines, no ambiguity, and it self-checks: the final period's liability closes to roughly zero, which is the same sanity check a reviewer would run on an Excel amortization table. There's no reason this step should ever involve a model — the whole value of an LLM is judgment under ambiguity, and there's no ambiguity left once the terms are structured.
+
+## 4. Persist and post: the output is a system of record, not a chat window
+
+Persistence and posting are the two steps most agentic workflows get wrong by leaving the result sitting in a chat transcript. Here the schedule lands in a database and, separately, becomes a journal entry in NetSuite — so the output is something your close process can actually depend on.
+
+The summary and the per-period schedule are upserted into two Supabase tables keyed by `lease_id`, and the write is idempotent — re-run a lease and its rows are replaced, not duplicated. That decoupling matters: extraction runs once, at lease inception or amendment. Posting runs every month, reading only from the database, with no PDF and no model in the loop:
+
+```python
+def prepare_journal_entry(lease_entries, as_of_date, posting_period, posting_period_id):
+    lines = []
+    for e in lease_entries:
+        entity = {"id": ns["entity_id"], "refName": ns["entity_name"]}
+        lines.append({"account": ACCOUNTS["rent_expense"], "debit": e["lease_expense"], "entity": entity, ...})
+        lines.append({"account": ACCOUNTS["rou_asset"], "credit": e["lease_expense"], "entity": entity, ...})
+        lines.append({"account": ACCOUNTS["rou_asset"], "debit": e["interest"], "entity": entity, ...})
+        lines.append({"account": ACCOUNTS["lease_liability"], "credit": e["interest"], "entity": entity, ...})
+    return {"line": {"items": lines}, "postingPeriod": {"id": str(posting_period_id)}, ...}
+```
+
+Four lines per lease, every month: debit rent expense / credit ROU asset for the periodic cost, debit ROU asset / credit lease liability for interest accretion. The posting call itself goes through NetSuite's REST API with OAuth1, the same pattern you'd use for any programmatic NetSuite write.
+
+## 5. Automating the arithmetic doesn't remove controls — it moves them
+
+Automating the reading and the arithmetic doesn't remove controls, it moves them into the code: a reconciliation tolerance, an explicit `null` for missing data, an explicit entity map, and a credential gate that keeps the posting step from firing without a human-set vendor mapping.
+
+Every lease needs an entry in a `LEASE_NETSUITE_MAP` — the landlord vendor ID, by hand — before it can post; an unmapped lease posts to a placeholder and prints a warning instead of silently guessing an entity. The NetSuite step won't run at all unless every credential is present in the environment; without them, the notebook builds and prints the exact payload it would have posted, so you can review it before deciding to wire up production keys. That's the same lesson every team learns automating a close process: higher throughput means an error propagates faster, so the checks that used to live in a reviewer's head have to live in the pipeline instead.
+
+## FAQ
+
+**Q: Does this replace lease accounting software like LeaseQuery or Visual Lease?**
+Not necessarily. For a small portfolio it can replace dedicated lease software outright. For a larger one, it's the ingestion layer — it replaces the manual abstraction step, and you can still push the finished schedule into whatever lease system you already run.
+
+**Q: What stops the model from silently getting a number wrong on an amendment-heavy lease?**
+The forced tool schema, a citation for every extracted figure, and a reconciliation check against any total the lease itself states. Missing data comes back as `null`, never a guessed `0`, so a silent gap is visible instead of absorbed into the schedule.
+
+**Q: Do I need Supabase specifically?**
+No. Swap in Postgres, Snowflake, or whatever store you already run — the pattern is an idempotent upsert of a header table and a detail table, keyed by `lease_id`.
+
+**Q: How much engineering does this take to build?**
+Less than you'd expect. The extraction notebook is a few hundred lines including the schema; the schedule builder is about 40 lines of pandas; the NetSuite poster is a REST call with OAuth1. If you're comfortable with Python and REST APIs, you can build this.
+
+Want to give it a shot? Both notebooks — extraction with citations, the ASC 842 schedule builder, and the NetSuite poster — are in the [theaccountantthatcodes GitHub repo](https://github.com/The-Accountant-that-codes/automation_scripts/tree/main/lease_agent), along with a mocked lease contract so you can run the whole pipeline end to end without needing a real lease on hand.
+
+The reading was always the expensive part, and it's the part that just moved. The arithmetic was never the hard part — it was just the part nobody had gotten around to automating, because it was tangled up with the reading. Separate the two, and lease accounting stops being a manual close task and becomes a pipeline: an agent that reads once per lease, and code that runs the same way every month.
+
+*As a CPA and Controller who has built this kind of pipeline in production, I'd rather own the controls in code than trust them to a reviewer's memory at 11pm on close day.*
+
+*Last updated: August 2026.*
