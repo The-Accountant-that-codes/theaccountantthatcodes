@@ -1,0 +1,184 @@
+---
+title: "Meet Rev Rick: a DIY revenue agent from Closed Won to SuiteBilling"
+slug: "meet-rev-rick-a-diy-revenue-agent-from-closed-won-to-suitebilling"
+date: 2026-10-11
+excerpt: "Plenty of tools start from a PDF or sync Salesforce fields into a sales order. Rev Rick goes end to end: Salesforce, the executed contract in Ironclad, Claude's read of the deal, and the right treatment in NetSuite SuiteBilling — with a human on every exception."
+tags:
+  - "NetSuite"
+  - "Salesforce"
+  - "SuiteBilling"
+featureImage: "/images/meet-rev-rick-a-diy-revenue-agent-from-closed-won-to-suitebilling/from-closed-won-to-subscription.png"
+draft: false
+---
+
+A deal closes. Sales rings the gong. And somewhere in revenue accounting, someone opens the Salesforce opportunity, goes hunting for the signed contract, reads it, and retypes the whole thing into NetSuite SuiteBilling. Billing account, price plan, subscription — one field at a time.
+
+There are plenty of products that automate a slice of that. Some start from a PDF you upload. Others sync Salesforce fields into a sales order. Both skip the part that matters: the executed contract is the source of truth, and it lives in your contract management system. Not in an upload folder, and not in the CRM fields sales filled in from memory.
+
+So we built the whole thing ourselves. Meet Rev Rick — an end-to-end, DIY revenue agent. Here's what one deal looks like:
+
+1. It starts in **Salesforce**, with the queue of Closed Won opportunities.
+2. It goes to **Ironclad**, our contract management system, and pulls the executed agreements on its own.
+3. **Claude** reads them, decides what kind of deal this is, and extracts the commercial terms.
+4. Python reconciles those terms against the opportunity, rule by rule.
+5. It **proposes the SuiteBilling treatment** — a new subscription, a change order, or a termination plus a new subscription — and books it once a person signs off.
+
+That last step is the one I couldn't find anywhere. As far as I know, nothing out there lets you put an agent in front of SuiteBilling — not even NetSuite itself.
+
+The full code is open source in the [theaccountantthatcodes GitHub repo](https://github.com/The-Accountant-that-codes/automation_scripts/tree/main/rev-rick), demo mode included. Let's walk through how it works.
+
+## 1. It starts where the contract actually lives
+
+Rev Rick never asks you for a PDF. It follows the opportunity to the contract system and downloads the signed copy itself.
+
+Ironclad's Salesforce package keeps a contract record linked to each opportunity, so one SOQL query gets us the ids:
+
+```python
+ic_query = (
+    "SELECT Id, Contract_ID__c, Opportunity__c "
+    "FROM ironclad__Ironclad_Contract__c "
+    f"WHERE Opportunity__c IN ('{ids_str}')"
+)
+```
+
+With the ids in hand, Ironclad's API hands over the executed PDF:
+
+```python
+def download_signed_copy_bytes(record, access_token, user_email):
+    url = _api(f"/public/api/v1/records/{record['id']}/attachments/signedCopy")
+    headers = {
+        "Authorization": f"Bearer {access_token}",
+        "x-as-user-email": user_email,
+        "Accept": "application/pdf",
+    }
+    response = requests.get(url, headers=headers)
+    return response.content if response.status_code == 200 else None
+```
+
+That's the signed copy. Not a draft, not the version someone saved to their desktop. Every MSA, SOW and Order Form linked to the deal comes along for the ride.
+
+The agent reads what legal executed, and nobody has to go find it.
+
+## 2. Claude reads the documents and names the deal
+
+Before it extracts a single number, Claude decides what kind of deal this is: Initial, Pilot Conversion, Expansion, Conversion, Renewal or Credit.
+
+Why not just trust the Salesforce record type? Because the record type is an input, not an answer. The prompt says so in plain words:
+
+```python
+CLASSIFIER_SYSTEM_PROMPT = """...
+The Salesforce record type is an input that may be wrong or stale. It is exactly
+what this review exists to verify. Never classify on the record type alone.
+
+THE HARD CASE: EXPANSION VS. CONVERSION
+Both typically carry record type Expansion, so record type provides no separation.
+The discriminating question: do these documents establish a new Service Term, or
+add scope under an existing one?
+..."""
+```
+
+That hard case is the whole game. An expansion adds seats to a subscription that's already running. A conversion ends it and starts a new one. Same record type in Salesforce, completely different transactions in NetSuite.
+
+The answer comes back as structured output against a JSON schema: type, confidence, rationale and evidence quotes. Click a quote and the PDF opens at that page with the passage highlighted. A second call extracts the terms the same way — dates, term, billing frequency, payment terms, line items, tiers, ramps.
+
+## 3. From the read to a SuiteBilling treatment
+
+Claude's read becomes a proposed NetSuite transaction through plain Python. No model decides what gets booked.
+
+First, the reconciliation: one row per rule, each with a tolerance and a severity. Dates match exactly or within a day, amounts within 1% or $1. In the demo data, Salesforce says 120 users and the SOW says 100:
+
+```
+[open] line[Subscription License].quantity: contract=100.0 | salesforce=120.0  (exact)
+```
+
+At $180 per user per month, that's $43,200 of ARR living in the CRM and nowhere in the contract. A rule caught it, with the contract quote attached.
+
+Then the treatment. The deal type picks the SuiteBilling action:
+
+```python
+if contract_type in ("Initial", "Pilot Conversion", "Renewal"):
+    plan.update(action="new_subscription", ...)
+elif contract_type == "Expansion":
+    plan.update(action="change_order", reason="MODIFY_PRICING on the existing subscription")
+elif contract_type == "Conversion":
+    plan.update(action="terminate_and_new", ...)
+```
+
+From there, `netsuite/builders.py` produces the exact payloads: billing accounts, tiered and volume price plans, subscriptions with one price interval per ramp period, and change orders. Here's the one for an expansion:
+
+```python
+def build_modify_pricing_change_order(subscription, line_number, effective_date, quantity_new,
+                                      recurring_amount_new, price_plan_new_id, sf_opportunity_id, memo):
+    line = {"sequence": str(line_number), "apply": True,
+            "quantityNew": quantity_new, "recurringAmountNew": recurring_amount_new}
+    if price_plan_new_id is not None:
+        line["pricePlanNew"] = {"id": str(price_plan_new_id)}
+    return _change_order("MODIFY_PRICING", "UPSELL_DOWNSELL", subscription,
+                         effective_date, sf_opportunity_id, memo, [line])
+```
+
+If you've ever wrestled the SuiteBilling REST API, you know lines like these are earned. NetSuite derives the recurring amount from the price plan, so the number you send has to match what the plan yields — or you get a 400. Re-send a price plan that's already on the line and NetSuite rejects that too. Those lessons live in the builders as comments, so you only pay for them once.
+
+## 4. It stops where judgment starts
+
+Rev Rick runs on its own while a stage is clean and stops when a named condition holds. I call it **checkpoint autonomy**.
+
+| Stage | Rev Rick stops when |
+|---|---|
+| Documents | No contract is linked, or a PDF has no text layer |
+| Classify | Confidence is low, or the type disagrees with Salesforce |
+| Reconcile | Any error row is open |
+| Match | Several candidate subscriptions, weak matches only, or none |
+| Payload review and push | Always |
+
+Every override costs a note, and every note lands in the session log next to the agent's own steps. That log is your audit trail.
+
+Corrections never touch the payload either. You fix the terms — inline, or by telling Rev Rick in plain words what's off — and code rebuilds the payload. Nobody edits JSON.
+
+And when it's time to book, exactly one function writes to NetSuite. It first proves the payload is the one you reviewed, for the environment you picked:
+
+```python
+def payload_hash(env: str, steps: list) -> str:
+    body = json.dumps({"env": env, "steps": steps}, sort_keys=True, default=str)
+    return hashlib.sha256(body.encode()).hexdigest()
+
+expected = payload_hash(env, built["steps"])
+if confirmed_payload_hash != expected:
+    raise PushRefused("The confirmed payload does not match the current payload for this environment. Review it again.")
+```
+
+You choose SANDBOX or PROD on every push, with nothing preselected, and PROD wants the word `PROD` typed out. A conversion terminates a live subscription, so it has to pass through the sandbox first. And the chat has no `/push` command. On purpose.
+
+## Want to give it a shot?
+
+The repo is a sanitized template with a demo mode, so you can run the whole flow without a single credential:
+
+```bash
+poetry install
+REV_RICK_DEMO=1 poetry run python main.py   # http://127.0.0.1:8080
+```
+
+Five deals are waiting in the queue, each built to hit a different checkpoint. The customers include Vandelay Industries, Pendant Publishing and Schrute Farms, all buying from Dunder Mifflin. I regret nothing.
+
+The contract system sits behind one small module, `sources/ironclad.py`, so pointing Rev Rick at a different one is a contained change. And the build spec that produced the app ships as `CLAUDE.md`, rewritten as a template you can hand to a coding agent for your own version.
+
+The full code — every module, the five demo deals and the test suite — is in the [theaccountantthatcodes GitHub repo](https://github.com/The-Accountant-that-codes/automation_scripts/tree/main/rev-rick). Clone it, run the demo, and point it at your own systems.
+
+## FAQ
+
+**Q: Is there an AI agent for NetSuite SuiteBilling?**
+Not off the shelf, as far as I know. Rev Rick is an open, DIY template: Claude reads the executed contract, Python builds the subscriptions and change orders through NetSuite's REST API, and a person approves the exact payload before anything is written.
+
+**Q: How is this different from a Salesforce-to-NetSuite integration?**
+A connector maps CRM fields to NetSuite records. Rev Rick reads the executed agreement from the contract management system, treats it as the source of truth, reconciles the opportunity against it, and picks the SuiteBilling treatment from what the documents say.
+
+**Q: Do I need Ironclad to use it?**
+No. Demo mode needs no systems at all, you can upload PDFs at the documents stage, and the Ironclad calls live in one module you can swap for your own contract system.
+
+---
+
+If your agent starts from an upload, someone still has to go find the contract. If it starts from CRM fields, it books what sales typed. If it starts from the executed agreement and ends in SuiteBilling, it books the deal that was signed.
+
+*As a CPA and Controller, I built Rev Rick for a real order-to-cash process. The repo is a sanitized template: the architecture and the controls are the real thing, and the products, ids and customers are not.*
+
+*Last updated: October 2026.*
