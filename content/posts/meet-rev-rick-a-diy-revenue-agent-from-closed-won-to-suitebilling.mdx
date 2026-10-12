@@ -23,7 +23,9 @@ So we built the whole thing ourselves. Meet Rev Rick — an end-to-end, DIY reve
 4. Python reconciles those terms against the opportunity, rule by rule.
 5. It **proposes the SuiteBilling treatment** — a new subscription, a change order, or a termination plus a new subscription — and books it once a person signs off.
 
-That last step is the one I couldn't find anywhere. As far as I know, nothing out there lets you put an agent in front of SuiteBilling — not even NetSuite itself. Let's walk through how it works.
+That last step is the one I couldn't find anywhere. As far as I know, nothing out there lets you put an agent in front of SuiteBilling — not even NetSuite itself.
+
+The full code is open source in the [theaccountantthatcodes GitHub repo](https://github.com/The-Accountant-that-codes/automation_scripts/tree/main/rev-rick), demo mode included. Let's walk through how it works.
 
 ## 1. It starts where the contract actually lives
 
@@ -160,7 +162,7 @@ Five deals are waiting in the queue, each built to hit a different checkpoint. T
 
 The contract system sits behind one small module, `sources/ironclad.py`, so pointing Rev Rick at a different one is a contained change. And the build spec that produced the app ships as `CLAUDE.md`, rewritten as a template you can hand to a coding agent for your own version.
 
-The code is in the [theaccountantthatcodes GitHub repo](https://github.com/The-Accountant-that-codes/automation_scripts/tree/main/rev-rick).
+The full code — every module, the five demo deals and the test suite — is in the [theaccountantthatcodes GitHub repo](https://github.com/The-Accountant-that-codes/automation_scripts/tree/main/rev-rick). Clone it, run the demo, and point it at your own systems.
 
 ## FAQ
 
