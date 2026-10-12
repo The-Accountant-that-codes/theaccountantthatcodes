@@ -61,25 +61,129 @@ The agent reads what legal executed, and nobody has to go find it.
 
 ## 2. Claude reads the documents and names the deal
 
-Before it extracts a single number, Claude decides what kind of deal this is: Initial, Pilot Conversion, Expansion, Conversion, Renewal or Credit.
+Before it extracts a single number, Claude decides what kind of deal this is: Initial, Pilot Conversion, Expansion, Conversion, Renewal or Credit. That one call picks the SuiteBilling transaction downstream, so the classifier prompt is where most of the accounting judgment lives. It's worth reading.
 
-Why not just trust the Salesforce record type? Because the record type is an input, not an answer. The prompt says so in plain words:
+**It opens with the ground rule.** The Salesforce record type is an input, not an answer:
 
-```python
-CLASSIFIER_SYSTEM_PROMPT = """...
-The Salesforce record type is an input that may be wrong or stale. It is exactly
-what this review exists to verify. Never classify on the record type alone.
-
-THE HARD CASE: EXPANSION VS. CONVERSION
-Both typically carry record type Expansion, so record type provides no separation.
-The discriminating question: do these documents establish a new Service Term, or
-add scope under an existing one?
-..."""
+```text
+CORE PRINCIPLE
+The classification must be your own conclusion from reading the
+documents. The signals below are hints and priors, not rules; do
+not apply them as a lookup table. The Salesforce record type is an
+input that may be wrong or stale. It is exactly what this review
+exists to verify. Never classify on the record type alone.
 ```
 
-That hard case is the whole game. An expansion adds seats to a subscription that's already running. A conversion ends it and starts a new one. Same record type in Salesforce, completely different transactions in NetSuite.
+**Then every deal type gets a definition and the signals that usually travel with it.** This is the playbook a revenue accountant carries in their head, written down:
 
-The answer comes back as structured output against a JSON schema: type, confidence, rationale and evidence quotes. Click a quote and the PDF opens at that page with the passage highlighted. A second call extracts the terms the same way — dates, term, billing frequency, payment terms, line items, tiers, ramps.
+```text
+TYPE DEFINITIONS AND TYPICAL SIGNALS
+
+Initial: first agreement with a customer, either a pilot or a
+direct long-term deal.
+- Record type is usually Initial.
+- Documents usually include an SOW setting out the Service Term.
+- An Order Form and/or MSA may also be present.
+
+Pilot Conversion: existing customer moves from a pilot or trial
+into a long-term deal.
+- Record type is usually Pilot Conversion.
+- Documents are usually an Order Form only, since the SOW was
+  signed for the pilot.
+- Service Term is normally governed by the existing SOW, though an
+  amendment to the governing documents is also common.
+
+Expansion: additional scope added under an existing agreement,
+typically additional seats or a Tier change. The Service Term
+should match the original order. If new products are added and a
+new Service Term is defined, classify as Initial.
+- Record type is usually Expansion.
+- Documents are usually an Order Form only.
+- No new Service Term; the existing term continues to govern.
+
+Conversion: existing customer moves onto new or restructured
+terms. Most commonly a shift from subscription-based fees to an
+enterprise fee; also a change in fees and Service Term (often a
+fee reduction paired with a term extension).
+- Record type is usually Expansion; there is no Conversion record
+  type in Salesforce.
+- Documents usually include a new SOW establishing a new Service
+  Term, possibly with an Order Form.
+
+Renewal: continuation of an expiring agreement.
+- Record type is usually Renewal.
+- Documents usually include a new SOW with a new Service Term,
+  though it may be an Order Form only.
+- Often references a prior contract by name, date, or effective
+  date.
+
+Credit: a credit, incentive or grant with no new product scope.
+- Record type is Credit Memo.
+```
+
+Notice the wording: "usually", "typically", "may". These are priors, not rules. Turn them into a lookup table and you've just rebuilt the record type.
+
+**Then it names the hard case out loud:**
+
+```text
+THE HARD CASE: EXPANSION VS. CONVERSION
+Both typically carry record type Expansion, so record type
+provides no separation. The discriminating question: do these
+documents establish a new Service Term, or add scope under an
+existing one?
+- New SOW with a new Service Term: lean Conversion.
+- Order Form only, existing term continues: lean Expansion.
+
+Conversion vs. Renewal is a related judgment call, since both
+establish a new Service Term. A Renewal continues substantially
+the same arrangement past its expiry; a Conversion restructures
+the commercial arrangement. A reference to a prior contract
+appears in both and does not by itself decide it.
+```
+
+That hard case is the whole game. An expansion is a change order on a subscription that's already running. A conversion terminates it and starts a new one. Same record type in Salesforce, completely different transactions in SuiteBilling — and the only thing that separates them is whether the paper sets a new Service Term.
+
+**And it's told when to stop guessing:**
+
+```text
+WHEN TO ESCALATE RATHER THAN GUESS
+Set contract_type to Unknown, needs_human_review to true, and
+explain why in review_reason when:
+- The documents are insufficient to tell (for example an Order
+  Form only that references an SOW not provided).
+- The document evidence contradicts the Salesforce record type.
+- The documents point to more than one type with roughly equal
+  support.
+- Documents are unreadable, truncated, empty, or clearly not the
+  executed version.
+Disagreement with Salesforce is a valid and useful output, not a
+failure. Report it rather than reconciling to the record type.
+```
+
+That last line earns its place. Without it, the easy answer is to agree with the record type you were handed.
+
+**Code decides what happens with the answer.** Claude responds with structured output against a JSON schema: type, confidence, rationale, evidence quotes, the Service Term and any prior-contract reference. Python then checks it against Salesforce and decides whether Rev Rick can keep going on its own:
+
+```python
+# Which conclusions count as agreeing with each Salesforce record type.
+# Expansion accepts Initial: new products with their own Service Term
+# are classified Initial.
+EXPECTED_TYPES_BY_RECORD_TYPE = {
+    "Initial": {"Initial"},
+    "Pilot Conversion": {"Pilot Conversion"},
+    "Expansion": {"Expansion", "Conversion", "Initial"},
+    "Renewal": {"Renewal"},
+    "Credit Memo": {"Credit"},
+}
+
+def _classification_is_clean(c: dict) -> bool:
+    return (config.AUTO_ADVANCE_CLEAN_CLASSIFICATION
+            and c["needs_human_review"] is False
+            and c["agrees_with_salesforce"] is True
+            and c["confidence"] != "low")
+```
+
+A clean classification moves on by itself. Anything else stops for a person, with every evidence quote one click away from its page in the PDF. A second call then extracts the terms the same way — dates, term, billing frequency, payment terms, line items, tiers, ramps.
 
 ## 3. From the read to a SuiteBilling treatment
 
